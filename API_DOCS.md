@@ -1,6 +1,6 @@
 # API Documentation for Frontend Integration
 
-This document outlines the key API endpoints used by the locations-claude frontend application.
+This document outlines the key API endpoints used by the locations frontend application.
 
 ## Authentication Endpoints
 
