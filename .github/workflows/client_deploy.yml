@@ -235,13 +235,43 @@ jobs:
           cat > client/server/src/views/plugin-registry.js << 'EOF'
           // Auto-generated Plugin Registry
           (function() {
-            if (!window.gun) {
-              console.warn('Gun not initialized, retrying plugin registration...');
-              setTimeout(arguments.callee, 1000);
-              return;
+            let retryCount = 0;
+            const maxRetries = 30; // 30 seconds max
+            
+            function registerPlugins() {
+              // Check multiple possible Gun locations
+              const gun = window.gun || window.Gun || (window.app && window.app.gun);
+              
+              if (!gun || typeof gun.get !== 'function') {
+                retryCount++;
+                if (retryCount < maxRetries) {
+                  console.warn(`Gun not initialized, retrying plugin registration... (attempt ${retryCount}/${maxRetries})`);
+                  setTimeout(registerPlugins, 1000);
+                } else {
+                  console.error('Failed to initialize plugins: Gun not available after 30 seconds');
+                  // Store plugins for manual registration later
+                  window._pendingPlugins = getPluginList();
+                }
+                return;
+              }
+              
+              console.log('🔫 Gun initialized, registering plugins...');
+              const plugins = getPluginList();
+              
+              // Register all plugins
+              plugins.forEach(plugin => {
+                gun.get('plugins').get(plugin.id).put(plugin);
+                console.log(`✅ Registered plugin: ${plugin.name}`);
+              });
+              
+              console.log(`📦 Total plugins registered: ${plugins.length}`);
+              
+              // Also store in window for debugging
+              window._registeredPlugins = plugins;
             }
             
-            const plugins = [];
+            function getPluginList() {
+              const plugins = [];
             
             // Event Plugin
             if (${{ github.event.inputs.include_event_plugin == 'true' || (github.event_name == 'push' && 'true') }}) {
@@ -288,13 +318,17 @@ jobs:
               });
             }
             
-            // Register all plugins
-            plugins.forEach(plugin => {
-              window.gun.get('plugins').get(plugin.id).put(plugin);
-              console.log(`✅ Registered plugin: ${plugin.name}`);
-            });
+              return plugins;
+            }
             
-            console.log(`📦 Total plugins registered: ${plugins.length}`);
+            // Start the registration process
+            registerPlugins();
+            
+            // Also listen for a custom event in case the app wants to trigger registration
+            window.addEventListener('gun-ready', function() {
+              console.log('📡 Received gun-ready event, registering plugins...');
+              registerPlugins();
+            });
           })();
           EOF
           
