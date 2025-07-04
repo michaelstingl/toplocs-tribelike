@@ -89,27 +89,60 @@ jobs:
         if: github.event.inputs.include_event_plugin == 'true' || (github.event_name == 'push' && true)
         run: |
           echo "📦 Building Event Plugin..."
+          echo "================================"
           # Clone to a separate directory outside workspace
           cd /tmp
           # Use the same GitHub org as the main repository for plugin discovery
+          echo "🔍 Attempting to clone from: https://github.com/${{ github.repository_owner }}/event-plugin.git"
           git clone -b ${{ github.event.inputs.event_plugin_branch || 'event-plugin-p2p' }} \
             https://github.com/${{ github.repository_owner }}/event-plugin.git event-plugin-build || \
+          (echo "⚠️ Fork not found, cloning from upstream: https://github.com/toplocs/event-plugin.git" && \
           git clone -b ${{ github.event.inputs.event_plugin_branch || 'event-plugin-p2p' }} \
-            https://github.com/toplocs/event-plugin.git event-plugin-build
+            https://github.com/toplocs/event-plugin.git event-plugin-build)
+          
           cd event-plugin-build
+          echo "📁 Current directory: $(pwd)"
+          echo "📋 Directory contents:"
+          ls -la
+          
+          # Check package.json
+          echo "📄 Package.json contents:"
+          cat package.json | grep -E '"name"|"version"|"scripts"' || echo "Failed to read package.json"
           
           # Install and build
           echo "📦 Installing plugin dependencies..."
-          npm install
+          npm install --verbose
+          
+          echo "🔍 Checking node_modules:"
+          ls -la node_modules/@vitejs/plugin-vue || echo "Vue plugin not found"
+          ls -la node_modules/vite || echo "Vite not found"
+          
           echo "🏗️ Building plugin..."
+          echo "Environment:"
+          echo "  NODE_VERSION: $(node --version)"
+          echo "  NPM_VERSION: $(npm --version)"
+          echo "  PLUGIN_BASE_PATH: $PLUGIN_BASE_PATH"
+          
           # Set base path for plugin assets
           export PLUGIN_BASE_PATH="/plugins/event-plugin/"
-          npm run build-only
+          
+          # Run build with more verbose output
+          npm run build-only -- --debug || (echo "❌ Build failed, checking files:" && \
+            echo "src/components contents:" && ls -la src/components/ && \
+            echo "Vite config:" && cat vite.config.ts)
+          
+          # Check build output
+          echo "📦 Build output:"
+          ls -la dist/ || echo "No dist directory found"
           
           # Copy back to main project
           cd ${{ github.workspace }}
           mkdir -p client/server/src/views/plugins/event-plugin
           cp -r /tmp/event-plugin-build/dist/* client/server/src/views/plugins/event-plugin/
+          
+          # Verify copy
+          echo "✅ Copied files:"
+          ls -la client/server/src/views/plugins/event-plugin/
           
           # Cleanup
           rm -rf /tmp/event-plugin-build
@@ -137,27 +170,60 @@ jobs:
         if: github.event.inputs.include_chat_plugin == 'true' || (github.event_name == 'push' && true)
         run: |
           echo "📦 Building Chat Plugin..."
+          echo "================================"
           # Clone to a separate directory outside workspace
           cd /tmp
           # Use the same GitHub org as the main repository for plugin discovery
+          echo "🔍 Attempting to clone from: https://github.com/${{ github.repository_owner }}/chat-plugin.git"
           git clone -b ${{ github.event.inputs.chat_plugin_branch || 'chat-plugin-p2p' }} \
             https://github.com/${{ github.repository_owner }}/chat-plugin.git chat-plugin-build || \
+          (echo "⚠️ Fork not found, cloning from upstream: https://github.com/toplocs/chat-plugin.git" && \
           git clone -b ${{ github.event.inputs.chat_plugin_branch || 'chat-plugin-p2p' }} \
-            https://github.com/toplocs/chat-plugin.git chat-plugin-build
+            https://github.com/toplocs/chat-plugin.git chat-plugin-build)
+          
           cd chat-plugin-build
+          echo "📁 Current directory: $(pwd)"
+          echo "📋 Directory contents:"
+          ls -la
+          
+          # Check package.json
+          echo "📄 Package.json contents:"
+          cat package.json | grep -E '"name"|"version"|"scripts"' || echo "Failed to read package.json"
           
           # Install and build
           echo "📦 Installing plugin dependencies..."
-          npm install
+          npm install --verbose
+          
+          echo "🔍 Checking node_modules:"
+          ls -la node_modules/@vitejs/plugin-vue || echo "Vue plugin not found"
+          ls -la node_modules/vite || echo "Vite not found"
+          
           echo "🏗️ Building plugin..."
+          echo "Environment:"
+          echo "  NODE_VERSION: $(node --version)"
+          echo "  NPM_VERSION: $(npm --version)"
+          echo "  PLUGIN_BASE_PATH: $PLUGIN_BASE_PATH"
+          
           # Set base path for plugin assets
           export PLUGIN_BASE_PATH="/plugins/chat-plugin/"
-          npm run build-only
+          
+          # Run build with more verbose output
+          npm run build-only -- --debug || (echo "❌ Build failed, checking files:" && \
+            echo "src/components contents:" && ls -la src/components/ && \
+            echo "Vite config:" && cat vite.config.ts)
+          
+          # Check build output
+          echo "📦 Build output:"
+          ls -la dist/ || echo "No dist directory found"
           
           # Copy back to main project
           cd ${{ github.workspace }}
           mkdir -p client/server/src/views/plugins/chat-plugin
           cp -r /tmp/chat-plugin-build/dist/* client/server/src/views/plugins/chat-plugin/
+          
+          # Verify copy
+          echo "✅ Copied files:"
+          ls -la client/server/src/views/plugins/chat-plugin/
           
           # Cleanup
           rm -rf /tmp/chat-plugin-build
@@ -245,17 +311,34 @@ jobs:
           echo "🚀 Deployment Summary:"
           echo "===================="
           echo "Main App: ✅ Built"
+          echo ""
+          echo "📦 Plugins Status:"
           if [[ "${{ github.event.inputs.include_event_plugin }}" == "true" ]] || [[ "${{ github.event_name }}" == "push" ]]; then
             echo "Event Plugin: ✅ Included (branch: ${{ github.event.inputs.event_plugin_branch || 'event-plugin-p2p' }})"
+          else
+            echo "Event Plugin: ⚪ Skipped"
           fi
           if [[ "${{ github.event.inputs.include_wiki_plugin }}" == "true" ]]; then
             echo "Wiki Plugin: ✅ Included (branch: ${{ github.event.inputs.wiki_plugin_branch || 'gun' }})"
+          else
+            echo "Wiki Plugin: ⚪ Skipped"
           fi
           if [[ "${{ github.event.inputs.include_chat_plugin }}" == "true" ]] || [[ "${{ github.event_name }}" == "push" ]]; then
             echo "Chat Plugin: ✅ Included (branch: ${{ github.event.inputs.chat_plugin_branch || 'chat-plugin-p2p' }})"
+          else
+            echo "Chat Plugin: ⚪ Skipped"
           fi
           echo "===================="
-          ls -la client/server/src/views/plugins/ || echo "No plugins directory"
+          echo ""
+          echo "📁 Plugin Directory Structure:"
+          if [ -d "client/server/src/views/plugins" ]; then
+            tree client/server/src/views/plugins/ || ls -la client/server/src/views/plugins/
+          else
+            echo "❌ No plugins directory found"
+          fi
+          echo ""
+          echo "🔍 Total Size:"
+          du -sh client/server/src/views/ || echo "Unable to calculate size"
         
       - name: Setup Pages
         uses: actions/configure-pages@v4
