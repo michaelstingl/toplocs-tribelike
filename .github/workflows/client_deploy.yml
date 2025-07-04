@@ -2,7 +2,7 @@ name: Deploy Client with Plugins to GitHub Pages
 
 on:
   push:
-    branches: [gun]
+    branches: [main]
   workflow_dispatch:
     inputs:
       include_event_plugin:
