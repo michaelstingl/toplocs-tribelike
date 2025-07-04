@@ -108,8 +108,8 @@ jobs:
           
           # Copy back to main project
           cd ${{ github.workspace }}
-          mkdir -p server/dist/views/plugins/event-plugin
-          cp -r /tmp/event-plugin-build/dist/* server/dist/views/plugins/event-plugin/
+          mkdir -p client/server/src/views/plugins/event-plugin
+          cp -r /tmp/event-plugin-build/dist/* client/server/src/views/plugins/event-plugin/
           
           # Cleanup
           rm -rf /tmp/event-plugin-build
@@ -128,8 +128,8 @@ jobs:
           pnpm install --no-frozen-lockfile
           pnpm build
           cd ..
-          mkdir -p server/dist/views/plugins/wiki-plugin
-          cp -r temp-wiki-plugin/server/views/* server/dist/views/plugins/wiki-plugin/
+          mkdir -p client/server/src/views/plugins/wiki-plugin
+          cp -r temp-wiki-plugin/server/views/* client/server/src/views/plugins/wiki-plugin/
           echo "✅ Wiki Plugin included"
           
       # Chat Plugin (when ready)
@@ -143,14 +143,14 @@ jobs:
           # pnpm install
           # pnpm build-only
           # cd ..
-          # mkdir -p server/dist/views/plugins/chat-plugin
-          # cp -r temp-chat-plugin/dist/* server/dist/views/plugins/chat-plugin/
+          # mkdir -p client/server/src/views/plugins/chat-plugin
+          # cp -r temp-chat-plugin/dist/* client/server/src/views/plugins/chat-plugin/
           echo "⚠️  Chat Plugin not yet implemented"
           
       # Create plugin registry
       - name: Create Plugin Registry
         run: |
-          cat > server/dist/views/plugin-registry.js << 'EOF'
+          cat > client/server/src/views/plugin-registry.js << 'EOF'
           // Auto-generated Plugin Registry
           (function() {
             if (!window.gun) {
@@ -204,8 +204,8 @@ jobs:
       # Inject plugin registry into index.html
       - name: Inject Plugin Registry
         run: |
-          if grep -q "</body>" server/dist/views/index.html; then
-            sed -i 's|</body>|<script src="/plugin-registry.js"></script></body>|' server/dist/views/index.html
+          if grep -q "</body>" client/server/src/views/index.html; then
+            sed -i 's|</body>|<script src="/plugin-registry.js"></script></body>|' client/server/src/views/index.html
           fi
           
       # Summary
@@ -224,7 +224,7 @@ jobs:
             echo "Chat Plugin: ⚠️  Skipped (not implemented, would use branch: ${{ github.event.inputs.chat_plugin_branch || 'main' }})"
           fi
           echo "===================="
-          ls -la server/dist/views/plugins/ || echo "No plugins directory"
+          ls -la client/server/src/views/plugins/ || echo "No plugins directory"
         
       - name: Setup Pages
         uses: actions/configure-pages@v4
@@ -232,7 +232,7 @@ jobs:
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: ./server/dist/views
+          path: ./client/server/src/views
 
   deploy:
     runs-on: ubuntu-latest
