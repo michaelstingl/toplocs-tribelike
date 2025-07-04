@@ -5,6 +5,11 @@ on:
     branches: [main]
   workflow_dispatch:
     inputs:
+      base_path:
+        description: 'Custom base path (e.g., /my-app). Leave empty for auto-detection'
+        required: false
+        type: string
+        default: ''
       include_event_plugin:
         description: 'Include Event Plugin (P2P)'
         required: false
@@ -67,7 +72,15 @@ jobs:
         run: pnpm install
         
       - name: Build project
-        run: pnpm build
+        run: |
+          # Set base path for build if provided
+          if [[ -n "${{ github.event.inputs.base_path }}" ]]; then
+            export BASE_PATH="${{ github.event.inputs.base_path }}"
+          elif [[ "${{ github.event.repository.name }}" != *".github.io" ]]; then
+            export BASE_PATH="/${{ github.event.repository.name }}"
+          fi
+          echo "Building with BASE_PATH=${BASE_PATH:-/}"
+          pnpm build
         
       # Event Plugin
       - name: Build and include Event Plugin
@@ -76,6 +89,9 @@ jobs:
           echo "📦 Building Event Plugin..."
           # Clone to a separate directory outside workspace
           cd /tmp
+          # Use the same GitHub org as the main repository for plugin discovery
+          git clone -b ${{ github.event.inputs.event_plugin_branch || 'event-plugin-p2p' }} \
+            https://github.com/${{ github.repository_owner }}/event-plugin.git event-plugin-build || \
           git clone -b ${{ github.event.inputs.event_plugin_branch || 'event-plugin-p2p' }} \
             https://github.com/toplocs/event-plugin.git event-plugin-build
           cd event-plugin-build
@@ -102,6 +118,8 @@ jobs:
         if: github.event.inputs.include_wiki_plugin == 'true'
         run: |
           echo "📦 Building Wiki Plugin..."
+          git clone -b ${{ github.event.inputs.wiki_plugin_branch || 'gun' }} \
+            https://github.com/${{ github.repository_owner }}/wiki-plugin.git temp-wiki-plugin || \
           git clone -b ${{ github.event.inputs.wiki_plugin_branch || 'gun' }} \
             https://github.com/toplocs/wiki-plugin.git temp-wiki-plugin
           cd temp-wiki-plugin
@@ -226,6 +244,16 @@ jobs:
         run: |
           echo "🌐 Deployment Complete!"
           echo "======================"
-          echo "Main App: https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/"
-          echo "Event Plugin: https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/plugins/event-plugin/"
+          if [[ "${{ github.event.repository.name }}" == *".github.io" ]]; then
+            # User/Org GitHub Pages site (e.g., username.github.io)
+            echo "Main App: https://${{ github.repository_owner }}.github.io/"
+            echo "Event Plugin: https://${{ github.repository_owner }}.github.io/plugins/event-plugin/"
+          else
+            # Project GitHub Pages site
+            echo "Main App: https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/"
+            echo "Event Plugin: https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/plugins/event-plugin/"
+          fi
           echo "======================"
+          echo ""
+          echo "Note: If you have a custom domain configured in GitHub Pages settings,"
+          echo "your site will be available at that domain instead."
