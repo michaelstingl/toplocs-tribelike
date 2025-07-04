@@ -24,8 +24,8 @@ You can manually trigger the deployment from the Actions tab with custom plugin 
 2. Click "Run workflow"
 3. Select which plugins to include:
    - **Event Plugin** (P2P) - Default: enabled
-   - **Wiki Plugin** - Default: disabled  
-   - **Chat Plugin** - Default: disabled (not yet implemented)
+   - **Chat Plugin** (P2P) - Default: enabled
+   - **Wiki Plugin** - Default: disabled
 4. Optionally specify plugin branches
 
 ### Configuration
