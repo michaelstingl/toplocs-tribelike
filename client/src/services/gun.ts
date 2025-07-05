@@ -36,4 +36,10 @@ gun.lookup = async function(key: string, id: string) {
   return data ? { id, ...data } : null;
 }
 
+// Expose gun globally for debugging (remove in production!)
+if (import.meta.env.DEV) {
+  (window as any).gun = gun;
+  console.log('🔫 Gun exposed to window.gun for debugging');
+}
+
 export default gun;
