@@ -1,11 +1,14 @@
 import { ref, inject, provide, watch, onMounted, onUnmounted } from 'vue';
+import { useRouter } from 'vue-router';
 import gun from '@/services/gun';
+import { addPluginRoutes } from '@/router/plugins';
 
 export function pluginProvider() {
   const plugins = ref<Plugin[]>([]);
   const routes = ref<Route[]>([]);
   const slots = ref<Slot[]>([]);
   const tabs = ref<Tab[]>([]);
+  const router = useRouter();
 
   onMounted(async () => {
     // Check if we need to bootstrap plugins from manifest
@@ -102,6 +105,10 @@ export function pluginProvider() {
       }
       
       console.log('📦 Plugin manifest processing complete');
+      
+      // Re-run route registration after bootstrap
+      console.log('🛣️ Registering plugin routes...');
+      addPluginRoutes(router);
     }
 
     // Now load plugins from Gun as usual
