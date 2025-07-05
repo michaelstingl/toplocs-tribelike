@@ -20,7 +20,8 @@ export const addPluginRoutes = (router: any) => { //sync loading
               component: data.component,
             },
           }
-          router.addRoute('sphereDetail', route);
+          // Add as top-level route instead of child route
+          router.addRoute(route);
         }
       });
     }
