@@ -232,111 +232,94 @@ jobs:
       # Create plugin registry
       - name: Create Plugin Registry
         run: |
-          cat > client/server/src/views/plugin-registry.js << 'EOF'
-          // Auto-generated Plugin Registry
-          (function() {
-            let retryCount = 0;
-            const maxRetries = 30; // 30 seconds max
-            
-            function registerPlugins() {
-              // Check multiple possible Gun locations
-              const gun = window.gun || window.Gun || (window.app && window.app.gun);
-              
-              if (!gun || typeof gun.get !== 'function') {
-                retryCount++;
-                if (retryCount < maxRetries) {
-                  console.warn(`Gun not initialized, retrying plugin registration... (attempt ${retryCount}/${maxRetries})`);
-                  setTimeout(registerPlugins, 1000);
-                } else {
-                  console.error('Failed to initialize plugins: Gun not available after 30 seconds');
-                  // Store plugins for manual registration later
-                  window._pendingPlugins = getPluginList();
-                }
-                return;
-              }
-              
-              console.log('🔫 Gun initialized, registering plugins...');
-              const plugins = getPluginList();
-              
-              // Register all plugins
-              plugins.forEach(plugin => {
-                gun.get('plugins').get(plugin.id).put(plugin);
-                console.log(`✅ Registered plugin: ${plugin.name}`);
-              });
-              
-              console.log(`📦 Total plugins registered: ${plugins.length}`);
-              
-              // Also store in window for debugging
-              window._registeredPlugins = plugins;
-            }
-            
-            function getPluginList() {
-              const plugins = [];
-            
-            // Event Plugin
-            if (${{ github.event.inputs.include_event_plugin == 'true' || (github.event_name == 'push' && 'true') }}) {
-              plugins.push({
-                id: 'event-plugin',
-                name: 'Events (P2P)',
-                description: 'Pure P2P event management for communities',
-                url: '/plugins/event-plugin/plugin.js',
-                version: '1.0.0',
-                author: 'Tribelike Community',
-                category: 'social',
-                enabled: true,
-                icon: '📅'
-              });
-            }
-            
-            // Wiki Plugin
-            if (${{ github.event.inputs.include_wiki_plugin == 'true' }}) {
-              plugins.push({
-                id: 'wiki-plugin',
-                name: 'Wiki',
-                description: 'Collaborative wiki for communities',
-                url: '/plugins/wiki-plugin/plugin.js',
-                version: '0.5.0',
-                author: 'Tribelike Community',
-                category: 'productivity',
-                enabled: false,
-                icon: '📚'
-              });
-            }
-            
-            // Chat Plugin
-            if (${{ github.event.inputs.include_chat_plugin == 'true' || (github.event_name == 'push' && 'true') }}) {
-              plugins.push({
-                id: 'chat-plugin',
-                name: 'Chat (P2P)',
-                description: 'Pure P2P chat rooms for communities',
-                url: '/plugins/chat-plugin/plugin.js',
-                version: '1.0.0',
-                author: 'Tribelike Community',
-                category: 'social',
-                enabled: true,
-                icon: '💬'
-              });
-            }
-            
-              return plugins;
-            }
-            
-            // Start the registration process
-            registerPlugins();
-            
-            // Also listen for a custom event in case the app wants to trigger registration
-            window.addEventListener('gun-ready', function() {
-              console.log('📡 Received gun-ready event, registering plugins...');
-              registerPlugins();
-            });
-          })();
+          # Create a JavaScript file that will be loaded by the app
+          cat > client/server/src/views/plugin-manifest.js << 'EOF'
+          // Auto-generated Plugin Manifest
+          // This provides the initial plugin configuration for deployment
+          window.TRIBELIKE_PLUGIN_MANIFEST = [
           EOF
           
-      # Inject plugin registry into index.html
-      - name: Inject Plugin Registry
+          # Add Event Plugin
+          if [[ "${{ github.event.inputs.include_event_plugin }}" == "true" ]] || [[ "${{ github.event_name }}" == "push" ]]; then
+            cat >> client/server/src/views/plugin-manifest.js << 'EOF'
+            {
+              name: "event-plugin",
+              url: "/plugins/event-plugin/",
+              paths: [
+                {
+                  path: "/plugin/events",
+                  component: "Main"
+                }
+              ],
+              slots: [
+                {
+                  position: "SidebarEntityBottom",
+                  component: "Sidebar"
+                }
+              ],
+              tabs: []
+            },
+          EOF
+          fi
+          
+          # Add Chat Plugin
+          if [[ "${{ github.event.inputs.include_chat_plugin }}" == "true" ]] || [[ "${{ github.event_name }}" == "push" ]]; then
+            cat >> client/server/src/views/plugin-manifest.js << 'EOF'
+            {
+              name: "chat-plugin",
+              url: "/plugins/chat-plugin/",
+              paths: [
+                {
+                  path: "/plugin/chat",
+                  component: "Main"
+                }
+              ],
+              slots: [
+                {
+                  position: "SidebarEntityBottom",
+                  component: "Sidebar"
+                }
+              ],
+              tabs: []
+            },
+          EOF
+          fi
+          
+          # Add Wiki Plugin if enabled
+          if [[ "${{ github.event.inputs.include_wiki_plugin }}" == "true" ]]; then
+            cat >> client/server/src/views/plugin-manifest.js << 'EOF'
+            {
+              name: "wiki-plugin",
+              url: "/plugins/wiki-plugin/",
+              paths: [
+                {
+                  path: "/plugin/wiki",
+                  component: "Main"
+                }
+              ],
+              slots: [],
+              tabs: []
+            },
+          EOF
+          fi
+          
+          # Close the array and add helper function
+          cat >> client/server/src/views/plugin-manifest.js << 'EOF'
+          ];
+          
+          // Remove trailing comma from last plugin
+          window.TRIBELIKE_PLUGIN_MANIFEST = JSON.parse(
+            JSON.stringify(window.TRIBELIKE_PLUGIN_MANIFEST).replace(/,(\s*\])/g, '$1')
+          );
+          
+          console.log('📦 Plugin manifest loaded:', window.TRIBELIKE_PLUGIN_MANIFEST);
+          EOF
+          
+      # Inject plugin manifest into index.html
+      - name: Inject Plugin Manifest
         run: |
           if grep -q "</body>" client/server/src/views/index.html; then
-            sed -i 's|</body>|<script src="/plugin-registry.js"></script></body>|' client/server/src/views/index.html
+            sed -i 's|</body>|<script src="/plugin-manifest.js"></script></body>|' client/server/src/views/index.html
           fi
           
       # Summary
