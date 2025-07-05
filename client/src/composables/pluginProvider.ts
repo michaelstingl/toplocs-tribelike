@@ -19,7 +19,40 @@ export function pluginProvider() {
           let timeout = setTimeout(() => {
             // Timeout = plugin doesn't exist
             console.log(`  ➕ Adding missing plugin: ${manifestPlugin.name}`);
-            gun.get('plugins').get(manifestPlugin.name).put(manifestPlugin);
+            
+            // Create the plugin with Gun references for arrays
+            const pluginData = {
+              name: manifestPlugin.name,
+              url: manifestPlugin.url,
+              paths: `${manifestPlugin.name}_paths`,
+              slots: `${manifestPlugin.name}_slots`,
+              tabs: `${manifestPlugin.name}_tabs`
+            };
+            
+            // Store the plugin
+            gun.get('plugins').get(manifestPlugin.name).put(pluginData);
+            
+            // Store paths array
+            if (manifestPlugin.paths) {
+              manifestPlugin.paths.forEach((path: any, index: number) => {
+                gun.get(pluginData.paths).get(`path_${index}`).put(path);
+              });
+            }
+            
+            // Store slots array
+            if (manifestPlugin.slots) {
+              manifestPlugin.slots.forEach((slot: any, index: number) => {
+                gun.get(pluginData.slots).get(`slot_${index}`).put(slot);
+              });
+            }
+            
+            // Store tabs array
+            if (manifestPlugin.tabs) {
+              manifestPlugin.tabs.forEach((tab: any, index: number) => {
+                gun.get(pluginData.tabs).get(`tab_${index}`).put(tab);
+              });
+            }
+            
             resolve();
           }, 300);
           
@@ -28,7 +61,39 @@ export function pluginProvider() {
               console.log(`  ✓ Plugin already exists: ${manifestPlugin.name}`);
             } else {
               console.log(`  ➕ Adding new plugin: ${manifestPlugin.name}`);
-              gun.get('plugins').get(manifestPlugin.name).put(manifestPlugin);
+              
+              // Create the plugin with Gun references for arrays
+              const pluginData = {
+                name: manifestPlugin.name,
+                url: manifestPlugin.url,
+                paths: `${manifestPlugin.name}_paths`,
+                slots: `${manifestPlugin.name}_slots`,
+                tabs: `${manifestPlugin.name}_tabs`
+              };
+              
+              // Store the plugin
+              gun.get('plugins').get(manifestPlugin.name).put(pluginData);
+              
+              // Store paths array
+              if (manifestPlugin.paths) {
+                manifestPlugin.paths.forEach((path: any, index: number) => {
+                  gun.get(pluginData.paths).get(`path_${index}`).put(path);
+                });
+              }
+              
+              // Store slots array
+              if (manifestPlugin.slots) {
+                manifestPlugin.slots.forEach((slot: any, index: number) => {
+                  gun.get(pluginData.slots).get(`slot_${index}`).put(slot);
+                });
+              }
+              
+              // Store tabs array
+              if (manifestPlugin.tabs) {
+                manifestPlugin.tabs.forEach((tab: any, index: number) => {
+                  gun.get(pluginData.tabs).get(`tab_${index}`).put(tab);
+                });
+              }
             }
             clearTimeout(timeout);
             resolve();
